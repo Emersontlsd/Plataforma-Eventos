@@ -1,0 +1,35 @@
+import React from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import MainLayout from "../layout/MainLayout";
+import Login from "../pages/Login";
+import Register from "../pages/Register";
+import Dashboard from "../pages/Dashboard";
+import Eventos from "../pages/Eventos";
+import Participantes from "../pages/Participantes";
+import Ingressos from "../pages/Ingressos";
+import ComprarIngresso from "../pages/ComprarIngresso";
+import Relatorios from "../pages/Relatorios";
+import Configuracoes from "../pages/Configuracoes";
+import PrivateRoute from "../auth/PrivateRoute";
+import AdminRoute from "../auth/AdminRoute";
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
+        <Route index element={<Dashboard />} />
+        <Route path="eventos" element={<Eventos />} />
+        <Route path="participantes" element={<AdminRoute><Participantes /></AdminRoute>} />
+        <Route path="ingressos" element={<AdminRoute><Ingressos /></AdminRoute>} />
+        <Route path="comprar" element={<ComprarIngresso />} />
+        <Route path="relatorios" element={<AdminRoute><Relatorios /></AdminRoute>} />
+        <Route path="configuracoes" element={<Configuracoes/>} /> {/* make sure import name */}
+      </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}

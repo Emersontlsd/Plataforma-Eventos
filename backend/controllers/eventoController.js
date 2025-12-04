@@ -7,12 +7,28 @@ export default {
   },
 
   async criar(req, res) {
-    const novo = await Evento.create(req.body);
+    const novo = await Evento.create({
+      nome: req.body.nome,
+      descricao: req.body.descricao,
+      data: req.body.data,
+      local: req.body.local,
+      capacidade: req.body.capacidade
+    });
     res.json(novo);
   },
 
   async atualizar(req, res) {
-    const atualizado = await Evento.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const atualizado = await Evento.findByIdAndUpdate(
+      req.params.id,
+      {
+        nome: req.body.nome,
+        descricao: req.body.descricao,
+        data: req.body.data,
+        local: req.body.local,
+        capacidade: req.body.capacidade
+      },
+      { new: true }
+    );
     res.json(atualizado);
   },
 

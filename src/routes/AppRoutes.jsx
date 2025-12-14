@@ -28,7 +28,7 @@ export default function AppRoutes() {
         <Route path="comprar" element={<ComprarIngresso />} />
         <Route path="relatorios" element={<AdminRoute><Relatorios /></AdminRoute>} />
         <Route path="configuracoes" element={<Configuracoes/>} /> {/* make sure import name */}
-        <Route path="/admins" element={<Administradores />} />
+        <Route path="admins" element={<Administradores />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

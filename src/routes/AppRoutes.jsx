@@ -12,7 +12,7 @@ import Relatorios from "../pages/Relatorios";
 import Configuracoes from "../pages/Configuracoes";
 import PrivateRoute from "../auth/PrivateRoute";
 import AdminRoute from "../auth/AdminRoute";
-import Administradores from "./pages/Administradores";
+import Administradores from "../pages/Administradores";
 
 export default function AppRoutes() {
   return (

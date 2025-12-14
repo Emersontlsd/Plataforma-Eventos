@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Card, Row, Col, Table, Tag, Spin } from "antd";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import api from "../api/api";
+import api from "../api/api"; // Importando a instância do API configurada
 
 export default function Dashboard() {
   const [summary, setSummary] = useState({
@@ -12,11 +12,12 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Função para carregar os dados do backend
   useEffect(() => {
     async function load() {
       try {
-        const res = await api.get("/relatorios/eventos");
-        setSummary(res.data);
+        const res = await api.get("/relatorios/eventos"); // API que traz os dados dos relatórios de eventos
+        setSummary(res.data); // Atualiza o estado com os dados recebidos
       } catch (err) {
         console.error(err);
       } finally {
@@ -26,20 +27,22 @@ export default function Dashboard() {
     load();
   }, []);
 
+  // Definir as cores para os gráficos
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
-  // Gráfico de pizza usando participantesCount
+  // Dados do gráfico de pizza (Participantes por Evento)
   const pieData = summary.eventos.map((e) => ({
     name: e.nome,
-    value: e.participantesCount || 0,
+    value: e.participantes?.length || 0, // Usando a contagem de participantes
   }));
 
-  // Gráfico de barras usando ingressosCount
+  // Dados do gráfico de barras (Ingressos por Evento)
   const barData = summary.eventos.map((e) => ({
     nome: e.nome,
-    ingressos: e.ingressosCount || 0,
+    ingressos: e.ingressos?.length || 0, // Usando a contagem de ingressos
   }));
 
+  // Colunas da tabela para mostrar eventos
   const columns = [
     { title: "Evento", dataIndex: "nome", key: "nome" },
     { title: "Local", dataIndex: "local", key: "local" },
@@ -54,19 +57,23 @@ export default function Dashboard() {
       dataIndex: "status",
       key: "status",
       render: (s) =>
-        s === "futuro" ? <Tag color="green">Ainda vai acontecer</Tag> : <Tag color="red">Já aconteceu</Tag>,
+        s === "futuro" ? (
+          <Tag color="green">Ainda vai acontecer</Tag>
+        ) : (
+          <Tag color="red">Já aconteceu</Tag>
+        ),
     },
     {
       title: "Total Ingressos",
-      dataIndex: "ingressosCount",
-      key: "ingressosCount",
-      render: (_, r) => r.ingressosCount || 0,
+      dataIndex: "ingressos",
+      key: "ingressos",
+      render: (_, r) => r.ingressos?.length || 0, // Mostrando a quantidade de ingressos
     },
     {
       title: "Participantes",
-      dataIndex: "participantesCount",
-      key: "participantesCount",
-      render: (_, r) => r.participantesCount || 0,
+      dataIndex: "participantes",
+      key: "participantes",
+      render: (_, r) => r.participantes?.length || 0, // Mostrando a quantidade de participantes
     },
   ];
 

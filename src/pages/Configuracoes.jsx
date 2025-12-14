@@ -1,104 +1,106 @@
-import React, { useState } from "react";
-import { Form, Input, Button, Avatar, Upload, message } from "antd";
-import { UploadOutlined, UserOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import { Form, Input, Button, Upload, message, Card, Typography } from "antd";
+import { UploadOutlined } from "@ant-design/icons";
 import api from "../api/api";
 import { useAuth } from "../auth/AuthContext";
 
+const { Title } = Typography;
+
 export default function Configuracoes() {
-  const { user, setUser } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [avatarBase64, setAvatarBase64] = useState(user?.avatar || null);
-
+  const { user, updateUserLocal } = useAuth();
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
 
-  // Converte arquivo em Base64
-  const toBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-    });
+  useEffect(() => {
+    if (user) {
+      form.setFieldsValue({
+        nome: user.nome,
+        email: user.email,
+        telefone: user.telefone || ""
+      });
+      if (user.avatar?.url) {
+        setFileList([{
+          uid: "-1",
+          name: "avatar",
+          status: "done",
+          url: user.avatar.url
+        }]);
+      }
+    }
+  }, [user]);
 
-  const uploadProps = {
-    beforeUpload: async (file) => {
-      const base64 = await toBase64(file);
-      setAvatarBase64(base64);
-      return false; 
-    },
-  };
-
-  async function onSubmit(values) {
+  async function handleUpdate(values) {
     try {
       setLoading(true);
 
-      const payload = {
-        ...values,
-        avatar: avatarBase64, // foto base64
-      };
+      // Atualiza nome, telefone e senha
+      const res = await api.put(`/usuarios/${user.id}`, values);
+      let updatedUser = res.data;
 
-      const userId = user?._id || user?.id;
-
-      if (!userId) {
-        message.error("Erro: ID do usuário não encontrado.");
-        return;
+      // Atualiza foto
+      if (fileList.length > 0 && fileList[0].originFileObj) {
+        const formData = new FormData();
+        formData.append("imagem", fileList[0].originFileObj);
+        const fotoRes = await api.post(`/usuarios/imagem/${user.id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" }
+        });
+        updatedUser = fotoRes.data;
       }
 
-      const { data } = await api.put(`/usuarios/${userId}`, payload);
-
-      // Atualiza auth context e localStorage
-      setUser(data);
-      localStorage.setItem("user", JSON.stringify(data));
-
       message.success("Dados atualizados com sucesso!");
+      updateUserLocal(updatedUser);
+
     } catch (err) {
       console.error(err);
-      message.error("Erro ao atualizar dados.");
+      message.error("Erro ao atualizar dados");
     } finally {
       setLoading(false);
     }
   }
 
+  const uploadProps = {
+    beforeUpload: file => {
+      setFileList([file]);
+      return false;
+    },
+    onRemove: () => setFileList([]),
+    fileList
+  };
+
   return (
-    <div style={{ maxWidth: 450, margin: "0 auto" }}>
-      <h2>Configurações da Conta</h2>
+    <Card style={{ maxWidth: 500, margin: "20px auto" }}>
+      <Title level={3}>Configurações do Usuário</Title>
 
-      <div style={{ textAlign: "center", marginBottom: 20 }}>
-        <Avatar
-          size={120}
-          src={avatarBase64}
-          icon={<UserOutlined />}
-          style={{ border: "2px solid #ddd" }}
-        />
-      </div>
-
-      <Upload {...uploadProps} showUploadList={false}>
-        <Button icon={<UploadOutlined />}>Alterar Foto</Button>
-      </Upload>
-
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={user}
-        onFinish={onSubmit}
-        style={{ marginTop: 20 }}
-      >
-        <Form.Item name="nome" label="Nome">
+      <Form form={form} layout="vertical" onFinish={handleUpdate}>
+        <Form.Item label="Nome" name="nome" rules={[{ required: true }]}>
           <Input />
         </Form.Item>
 
-        <Form.Item name="email" label="Email">
+        <Form.Item label="E-mail" name="email">
+          <Input disabled />
+        </Form.Item>
+
+        <Form.Item label="Telefone" name="telefone">
           <Input />
         </Form.Item>
 
-        <Form.Item name="telefone" label="Telefone">
-          <Input />
+        <Form.Item label="Senha" name="senha">
+          <Input.Password placeholder="Deixe em branco para não alterar" />
         </Form.Item>
 
-        <Button type="primary" htmlType="submit" loading={loading} block>
-          Salvar Alterações
-        </Button>
+        <Form.Item label="Foto de Perfil">
+          <Upload {...uploadProps} listType="picture">
+            <Button icon={<UploadOutlined />}>Selecionar imagem</Button>
+          </Upload>
+        </Form.Item>
+
+        <Form.Item>
+          <Button type="primary" htmlType="submit" loading={loading} block>
+            Salvar Alterações
+          </Button>
+        </Form.Item>
       </Form>
-    </div>
+    </Card>
   );
 }

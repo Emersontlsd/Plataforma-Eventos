@@ -14,6 +14,7 @@ import PrivateRoute from "../auth/PrivateRoute";
 import AdminRoute from "../auth/AdminRoute";
 import Administradores from "../pages/Administradores";
 import EventoDetalhe from "../pages/EventoDetalhe"; // 👈 novo
+import EditarEvento from "../pages/EditarEvento"; // 👈 novo
 
 export default function AppRoutes() {
   return (

@@ -1,43 +1,28 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  Table,
-  Tag,
-  Modal,
-  List,
-  Button,
-  message,
-  DatePicker,
-  Select,
-  Space
-} from "antd";
+import React, { useEffect, useState } from "react";
+import { Table, Tag, Modal, List, Button, Select, message } from "antd";
+import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import dayjs from "dayjs";
-import { useNavigate } from "react-router-dom";
 
-const { RangePicker } = DatePicker;
+const { Option } = Select;
 
 export default function Relatorios() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("todos");
 
   const [participantsModal, setParticipantsModal] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState([]);
 
-  const [periodo, setPeriodo] = useState(null);
-  const [status, setStatus] = useState("todos");
-
   const navigate = useNavigate();
 
-  // 🔹 Carregar relatórios
   async function load() {
     try {
       setLoading(true);
       const res = await api.get("/relatorios/eventos");
-
-      // GARANTIA: sempre array
-      setData(Array.isArray(res.data.eventos) ? res.data.eventos : []);
-    } catch (err) {
-      message.error("Erro ao carregar relatórios");
+      setData(res.data.eventos || []);
+    } catch {
+      message.error("Erro ao carregar relatório");
     } finally {
       setLoading(false);
     }
@@ -47,67 +32,48 @@ export default function Relatorios() {
     load();
   }, []);
 
-  // 🔹 FILTROS (BLINDADO)
-  const filteredData = useMemo(() => {
-    return data.filter(evento => {
-      const dataEvento = evento.data ? dayjs(evento.data) : null;
-      const hoje = dayjs();
+  const filteredData = data.filter(e =>
+    statusFilter === "todos" ? true : e.status === statusFilter
+  );
 
-      // 📅 Filtro por período
-      if (periodo && periodo.length === 2 && dataEvento) {
-        if (
-          dataEvento.isBefore(periodo[0], "day") ||
-          dataEvento.isAfter(periodo[1], "day")
-        ) {
-          return false;
-        }
-      }
-
-      // ⏳ Filtro por status
-      if (status === "futuros" && dataEvento && !dataEvento.isAfter(hoje)) {
-        return false;
-      }
-
-      if (status === "encerrados" && dataEvento && !dataEvento.isBefore(hoje)) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [data, periodo, status]);
-
-  // 🔹 TABELA
   const columns = [
-    { title: "Evento", dataIndex: "nome" },
-    { title: "Local", dataIndex: "local" },
+    {
+      title: "Evento",
+      dataIndex: "nome",
+    },
+    {
+      title: "Local",
+      dataIndex: "local",
+    },
     {
       title: "Data",
       dataIndex: "data",
-      render: d => (d ? dayjs(d).format("DD/MM/YYYY") : "-")
+      render: d => d ? dayjs(d).format("DD/MM/YYYY") : "-"
     },
     {
       title: "Status",
-      dataIndex: "data",
-      render: d =>
-        d && dayjs(d).isAfter(dayjs()) ? (
-          <Tag color="green">Futuro</Tag>
-        ) : (
-          <Tag color="red">Encerrado</Tag>
-        )
+      dataIndex: "status",
+      render: s =>
+        s === "futuro"
+          ? <Tag color="green">Futuro</Tag>
+          : <Tag color="red">Encerrado</Tag>
     },
-    { title: "Ingressos", dataIndex: "totalIngressos" },
-    { title: "Participantes", dataIndex: "totalParticipantes" },
+    {
+      title: "Ingressos",
+      dataIndex: "totalIngressos",
+    },
+    {
+      title: "Participantes",
+      dataIndex: "totalParticipantes",
+    },
     {
       title: "Ações",
-      render: (_, evento) => (
-        <Space>
+      render: (_, r) => (
+        <>
           <Button
+            size="small"
             onClick={() => {
-              setSelectedParticipants(
-                Array.isArray(evento.participantes)
-                  ? evento.participantes
-                  : []
-              );
+              setSelectedParticipants(r.participantes || []);
               setParticipantsModal(true);
             }}
           >
@@ -115,12 +81,13 @@ export default function Relatorios() {
           </Button>
 
           <Button
-            type="primary"
-            onClick={() => navigate(`/eventos/${evento._id || evento.id}`)}
+            type="link"
+            size="small"
+            onClick={() => navigate(`/eventos/${r._id}`)}
           >
             Abrir Evento
           </Button>
-        </Space>
+        </>
       )
     }
   ];
@@ -129,36 +96,28 @@ export default function Relatorios() {
     <div>
       <h2>Relatórios de Eventos</h2>
 
-      {/* 🔹 FILTROS */}
-      <Space style={{ marginBottom: 16 }} wrap>
-        <RangePicker
-          onChange={v => setPeriodo(v)}
-          format="DD/MM/YYYY"
-        />
-
+      <div style={{ marginBottom: 16 }}>
         <Select
-          value={status}
-          onChange={setStatus}
-          style={{ width: 200 }}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          style={{ width: 220 }}
         >
-          <Select.Option value="todos">Todos</Select.Option>
-          <Select.Option value="futuros">Eventos Futuros</Select.Option>
-          <Select.Option value="encerrados">Eventos Encerrados</Select.Option>
+          <Option value="todos">Todos</Option>
+          <Option value="futuro">Eventos Futuros</Option>
+          <Option value="passado">Eventos Encerrados</Option>
         </Select>
-      </Space>
+      </div>
 
-      {/* 🔹 TABELA */}
       <Table
         columns={columns}
         dataSource={filteredData}
-        rowKey={r => r._id || r.id}
+        rowKey="_id"
         loading={loading}
         pagination={{ pageSize: 10 }}
       />
 
-      {/* 🔹 MODAL PARTICIPANTES */}
       <Modal
-        title="Participantes"
+        title="Participantes do Evento"
         open={participantsModal}
         onCancel={() => setParticipantsModal(false)}
         footer={null}
@@ -166,9 +125,9 @@ export default function Relatorios() {
         <List
           dataSource={selectedParticipants}
           locale={{ emptyText: "Nenhum participante" }}
-          renderItem={item => (
+          renderItem={p => (
             <List.Item>
-              <b>{item.nome}</b> — {item.email}
+              <b>{p?.nome}</b> — {p?.email}
             </List.Item>
           )}
         />

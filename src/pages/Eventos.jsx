@@ -30,16 +30,15 @@ export default function Eventos() {
   const [search, setSearch] = useState("");
   const [form] = Form.useForm();
 
-  // Carrega eventos
+  // Carregar eventos
   async function load() {
     setLoading(true);
     try {
       const ev = await eventDAO.findAll();
-      // Garante que ingressos e participantes existam
       const normalized = (ev || []).map(e => ({
         ...e,
-        ingressos: e.ingressos || [],
-        participantes: e.participantes || []
+        ingressos: Array.isArray(e.ingressos) ? e.ingressos : [],
+        participantes: Array.isArray(e.participantes) ? e.participantes : []
       }));
       setEvents(normalized);
     } catch (err) {
@@ -54,7 +53,7 @@ export default function Eventos() {
     load();
   }, []);
 
-  // Abrir modal de novo evento
+  // Novo evento
   function onAdd() {
     setEdit(null);
     form.resetFields();
@@ -65,13 +64,15 @@ export default function Eventos() {
   function onEdit(r) {
     setEdit(r);
     form.setFieldsValue({
-      ...r,
+      nome: r.nome,
+      local: r.local,
+      capacidade: r.capacidade,
       data: r.data ? dayjs(r.data) : null
     });
     setModalOpen(true);
   }
 
-  // Salvar evento
+  // Salvar (criar / editar)
   async function onSubmit(values) {
     const payload = {
       ...values,
@@ -81,10 +82,10 @@ export default function Eventos() {
     try {
       if (edit) {
         await eventDAO.update(edit._id || edit.id, payload);
-        message.success("Evento atualizado");
+        message.success("Evento atualizado com sucesso");
       } else {
         await eventDAO.create(payload);
-        message.success("Evento criado");
+        message.success("Evento criado com sucesso");
       }
       setModalOpen(false);
       load();
@@ -94,10 +95,10 @@ export default function Eventos() {
     }
   }
 
-  // Deletar evento
+  // Deletar
   async function onDelete(r) {
     Modal.confirm({
-      title: "Tem certeza que deseja excluir este evento?",
+      title: "Deseja realmente excluir este evento?",
       okText: "Sim",
       okType: "danger",
       cancelText: "Cancelar",
@@ -114,13 +115,13 @@ export default function Eventos() {
     });
   }
 
-  // Abrir modal de participantes
+  // Participantes
   function manageParticipants(r) {
     setSelectedEventId(r._id || r.id);
     setParticipantsModalOpen(true);
   }
 
-  // Filtrar eventos por busca
+  // Filtro
   const filteredEvents = useMemo(() => {
     if (!search) return events;
     const s = search.toLowerCase();
@@ -132,44 +133,31 @@ export default function Eventos() {
     );
   }, [events, search]);
 
-  // Colunas da tabela
+  // Colunas
   const columns = [
-    { title: "Nome", dataIndex: "nome", key: "nome" },
-    { title: "Local", dataIndex: "local", key: "local" },
-    { title: "Capacidade", dataIndex: "capacidade", key: "capacidade" },
+    { title: "Nome", dataIndex: "nome" },
+    { title: "Local", dataIndex: "local" },
+    { title: "Capacidade", dataIndex: "capacidade" },
     {
       title: "Data",
       dataIndex: "data",
-      key: "data",
-      render: d => (d ? dayjs(d).format("DD/MM/YYYY") : "")
+      render: d => (d ? dayjs(d).format("DD/MM/YYYY") : "-")
     },
     {
       title: "Participantes",
-      key: "participantes",
-      render: (_, r) => r.participantes?.length || 0
+      render: (_, r) => r.participantes.length
     },
     {
       title: "Ingressos",
-      key: "ingressos",
-      render: (_, r) => r.ingressos?.length || 0
+      render: (_, r) => r.ingressos.length
     },
     {
       title: "Ações",
-      key: "acoes",
       render: (_, r) => (
-        <div style={{ display: "flex", gap: 12, fontSize: 18 }}>
-          <EditOutlined
-            style={{ cursor: "pointer", color: "#1677ff" }}
-            onClick={() => onEdit(r)}
-          />
-          <DeleteOutlined
-            style={{ cursor: "pointer", color: "red" }}
-            onClick={() => onDelete(r)}
-          />
-          <TeamOutlined
-            style={{ cursor: "pointer", color: "#52c41a" }}
-            onClick={() => manageParticipants(r)}
-          />
+        <div style={{ display: "flex", gap: 12 }}>
+          <EditOutlined onClick={() => onEdit(r)} style={{ color: "#1677ff" }} />
+          <DeleteOutlined onClick={() => onDelete(r)} style={{ color: "red" }} />
+          <TeamOutlined onClick={() => manageParticipants(r)} style={{ color: "#52c41a" }} />
         </div>
       )
     }
@@ -177,19 +165,11 @@ export default function Eventos() {
 
   return (
     <BasePage title="Eventos">
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 12,
-          flexWrap: "wrap",
-          gap: 12
-        }}
-      >
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
         <Input.Search
-          placeholder="Pesquisar por nome, local, data ou capacidade"
+          placeholder="Pesquisar eventos"
           allowClear
-          style={{ width: 320, maxWidth: "100%" }}
+          style={{ width: 300 }}
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -213,37 +193,21 @@ export default function Eventos() {
         onOk={() => form.submit()}
         destroyOnClose
       >
-        <Form form={form} layout="vertical" onFinish={onSubmit}>
-          <Form.Item
-            name="nome"
-            label="Nome do Evento"
-            rules={[{ required: true, message: "Informe o nome do evento" }]}
-          >
+        <Form layout="vertical" form={form} onFinish={onSubmit}>
+          <Form.Item name="nome" label="Nome" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="local"
-            label="Local"
-            rules={[{ required: true, message: "Informe o local" }]}
-          >
+          <Form.Item name="local" label="Local" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
 
-          <Form.Item
-            name="capacidade"
-            label="Capacidade"
-            rules={[{ required: true, message: "Informe a capacidade" }]}
-          >
+          <Form.Item name="capacidade" label="Capacidade" rules={[{ required: true }]}>
             <InputNumber style={{ width: "100%" }} />
           </Form.Item>
 
-          <Form.Item
-            name="data"
-            label="Data"
-            rules={[{ required: true, message: "Informe a data" }]}
-          >
-            <DatePicker style={{ width: "100%" }} />
+          <Form.Item name="data" label="Data" rules={[{ required: true }]}>
+            <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
           </Form.Item>
         </Form>
       </Modal>

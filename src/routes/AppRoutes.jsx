@@ -25,6 +25,7 @@ export default function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="eventos" element={<Eventos />} />
         <Route path="eventos/:id" element={<EventoDetalhe />} /> {/* 👈 ESSENCIAL */}
+        <Route path="eventos/editar/:id" element={<EditarEvento />} />
         <Route path="participantes" element={<AdminRoute><Participantes /></AdminRoute>} />
         <Route path="ingressos" element={<AdminRoute><Ingressos /></AdminRoute>} />
         <Route path="comprar" element={<ComprarIngresso />} />
